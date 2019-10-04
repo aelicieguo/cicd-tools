@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  creationTimestamp: null
+  name: {{ NEXUS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ NEXUS_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ NEXUS_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ NEXUS_NFS_PATH }}
+    server: {{ NEXUS_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ NEXUS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ NEXUS_VOLUME_CAPACITY }}

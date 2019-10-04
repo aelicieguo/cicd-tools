@@ -1,0 +1,263 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ SONARQUBE_APPNAME }}
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+spec:
+  ports:
+  - name: {{ SONARQUBE_APPNAME }}
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: sonarqube
+    deploymentconfig: {{ SONARQUBE_APPNAME }}
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Route
+metadata:
+  annotations:
+    description: Route for SonarQube's http service.
+    haproxy.router.openshift.io/timeout: 4m
+    template.openshift.io/expose-uri: http://{.spec.host}{.spec.path}
+  name: {{ SONARQUBE_APPNAME }}
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+spec:
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: {{ SONARQUBE_APPNAME }}
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+  name: {{ SONARQUBE_APPNAME }}
+spec:
+  tags:
+  - annotations:
+      description: The SonarQube Docker image
+      tags: {{ SONARQUBE_APPNAME }}
+    from:
+      kind: DockerImage
+      name: {{ SONARQUBE_IMAGE }}
+    importPolicy: {}
+    name: {{ SONARQUBE_VERSION }}
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+    deploymentconfig: {{ SONARQUBE_APPNAME }}
+  name: {{ SONARQUBE_APPNAME }}
+spec:
+  replicas: 1
+  selector:
+    app: {{ SONARQUBE_APPNAME }}
+    deploymentconfig: {{ SONARQUBE_APPNAME }}
+  strategy:
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/container.sonarqube.image.entrypoint: '["./bin/run.sh"]'
+      creationTimestamp: null
+      labels:
+        app: {{ SONARQUBE_APPNAME }}
+        deploymentconfig: {{ SONARQUBE_APPNAME }}
+    spec:
+      containers:
+      - env:
+        - name: sonar.jdbc.password
+          value: {{ SONARQUBE_POSTGRESQL_PASSWORD }}
+        - name: sonar.jdbc.url
+          value: jdbc:postgresql://{{ SONARQUBE_POSTGRESQL_APPNAME }}/{{ SONARQUBE_POSTGRESQL_DB }}
+        - name: sonar.jdbc.username
+          value: {{ SONARQUBE_POSTGRESQL_USERNAME }}
+        image: {{ SONARQUBE_APPNAME }}:{{ SONARQUBE_VERSION }}
+        imagePullPolicy: IfNotPresent
+        name: {{ SONARQUBE_APPNAME }}
+        ports:
+        - containerPort: 9000
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          successThreshold: 1
+          httpGet:
+            port: 9000
+            path: /
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          successThreshold: 1
+          httpGet:
+            port: 9000
+            path: /
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 2Gi
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /opt/sonarqube/data
+          name: {{ SONARQUBE_PV }}
+        - mountPath: /opt/sonarqube/temp
+          name: sonarqube-temp
+        - mountPath: /opt/sonarqube/logs
+          name: sonarqube-logs
+        - mountPath: /opt/sonarqube/extensions
+          name: sonarqube-extensions
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: {{ SONARQUBE_PV }}
+        persistentVolumeClaim:
+          claimName: {{ SONARQUBE_PV }}
+      - name: sonarqube-temp
+        emptyDir: {}
+      - name: sonarqube-logs
+        emptyDir: {}
+      - name: sonarqube-extensions
+        emptyDir: {}
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - sonarqube
+      from:
+        kind: ImageStreamTag
+        name: {{ SONARQUBE_APPNAME }}:{{ SONARQUBE_VERSION }}
+    type: ImageChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ SONARQUBE_POSTGRESQL_APPNAME }}
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+spec:
+  ports:
+  - name: postgresql
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: {{ SONARQUBE_APPNAME }}
+    deploymentconfig: {{ SONARQUBE_POSTGRESQL_APPNAME }}
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: {{ SONARQUBE_APPNAME }}
+    deploymentconfig: {{ SONARQUBE_POSTGRESQL_APPNAME }}
+  name: {{ SONARQUBE_POSTGRESQL_APPNAME }} 
+spec:
+  replicas: 1
+  selector:
+    app: {{ SONARQUBE_APPNAME }}
+    deploymentconfig: {{ SONARQUBE_POSTGRESQL_APPNAME }}
+  strategy:
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ SONARQUBE_APPNAME }} 
+        deploymentconfig: {{ SONARQUBE_POSTGRESQL_APPNAME }}
+    spec:
+      containers:
+      - env:
+        - name: POSTGRESQL_USER
+          value: {{ SONARQUBE_POSTGRESQL_USERNAME }}
+        - name: POSTGRESQL_PASSWORD
+          value: {{ SONARQUBE_POSTGRESQL_PASSWORD }}
+        - name: POSTGRESQL_DATABASE
+          value: {{ SONARQUBE_POSTGRESQL_DB }}
+        image: {{ SONARQUBE_POSTGRESQL_IMAGE }}
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        name: postgresql
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -i
+            - -c
+            - psql -h 127.0.0.1 -U $POSTGRESQL_USER -q -d $POSTGRESQL_DATABASE -c 'SELECT 1'
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 256Mi
+        securityContext:
+          capabilities: {}
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /var/lib/pgsql/data
+          name: {{ SONARQUBE_POSTGRESQL_PV }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: {{ SONARQUBE_POSTGRESQL_PV }}
+        persistentVolumeClaim:
+          claimName: {{ SONARQUBE_POSTGRESQL_PV }}
+  test: false
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - postgresql
+      from:
+        kind: ImageStreamTag
+        name: {{ SONARQUBE_POSTGRESQL_IMAGE }}
+        namespace: openshift
+    type: ImageChange
+  - type: ConfigChange

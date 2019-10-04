@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  creationTimestamp: null
+  name: {{ GOGS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ GOGS_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ GOGS_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ GOGS_NFS_PATH }}
+    server: {{ GOGS_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ GOGS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ GOGS_VOLUME_CAPACITY }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  creationTimestamp: null
+  name: {{ GOGS_POSTGRESQL_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ GOGS_POSTGRESQL_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ GOGS_POSTGRESQL_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ GOGS_POSTGRESQL_NFS_PATH }}
+    server: {{ GOGS_POSTGRESQL_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ GOGS_POSTGRESQL_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ GOGS_POSTGRESQL_VOLUME_CAPACITY }}

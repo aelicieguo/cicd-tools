@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ SONARQUBE_POSTGRESQL_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ SONARQUBE_POSTGRESQL_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ SONARQUBE_POSTGRESQL_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ SONARQUBE_POSTGRESQL_NFS_PATH }}
+    server: {{ SONARQUBE_POSTGRESQL_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ SONARQUBE_POSTGRESQL_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ SONARQUBE_POSTGRESQL_VOLUME_CAPACITY }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ SONARQUBE_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ SONARQUBE_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ SONARQUBE_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ SONARQUBE_NFS_PATH }}
+    server: {{ SONARQUBE_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ SONARQUBE_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ SONARQUBE_VOLUME_CAPACITY }}

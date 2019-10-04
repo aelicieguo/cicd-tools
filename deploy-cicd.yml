@@ -1,0 +1,152 @@
+---
+- name: Deploy CICD tools to OCP
+  hosts: masters[0]
+  any_errors_fatal: true
+  vars_files:
+  - vars.yml
+  tasks:
+  - name: Login OCP as cluster-admin
+    command: 'oc login -u {{ ocUsername }} -p {{ ocPassword }}'
+
+  - name: Check if project exists
+    shell: oc projects | sed -e '1,2d' | sed -e '$d' | sed -e '$d' | sed -e 's/^[ \t]*//' | cut -d' ' -f 2
+    register: existing_ns
+
+  - name: Deploy sonarqube with persistence
+    block:
+    - name: Create sonarqube project
+      command: 'oc new-project {{ item.name }} --display-name="{{ item.display }}" --description="{{ item.description }}"'
+      when: item.name not in existing_ns.stdout_lines
+      loop: "{{ SONARQUBE_NAMESPACE }}"
+
+    - name: Create sonarqube pv template
+      template:
+        src: templates/sonarqube-pv.yml
+        dest: /tmp/sonarqube-pv.yml
+      loop: "{{ SONARQUBE_NAMESPACE }}"
+
+    - name: Create sonarqube pv
+      command: 'oc apply -f /tmp/sonarqube-pv.yml -n {{ item.name }}'
+      loop: "{{ SONARQUBE_NAMESPACE }}"
+
+    - name: Create sonarqube template
+      template: 
+        src: templates/sonarqube-postgresql-template.yml 
+        dest: /tmp/sonarqube-postgresql-template.yml
+      loop: "{{ SONARQUBE_NAMESPACE }}"
+
+    - name: Create sonarqube
+      command: 'oc apply -f /tmp/sonarqube-postgresql-template.yml -n {{ item.name }}'
+      loop: "{{ SONARQUBE_NAMESPACE }}"
+
+  - name: Deploy jenkins with persistence
+    block:
+    - name: Create jenkins project
+      command: 'oc new-project {{ item.name }} --display-name="{{ item.display }}" --description="{{ item.description }}"'
+      when: item.name not in existing_ns.stdout_lines
+      loop: "{{ JENKINS_NAMESPACE }}"
+
+    - name: Create jenkins pv template
+      template:
+        src: templates/jenkins-pv.yml
+        dest: /tmp/jenkins-pv.yml
+      loop: "{{ JENKINS_NAMESPACE }}"
+
+    - name: Create jenkins pv
+      command: 'oc apply -f /tmp/jenkins-pv.yml -n {{ item.name }}'
+      loop: "{{ JENKINS_NAMESPACE }}"
+
+#    - name: Create jenkins template
+#      template: 
+#        src: templates/jenkins-persistent-template.yml 
+#        dest: /tmp/jenkins-persistent-template.yml
+#      loop: "{{ JENKINS_NAMESPACE }}"
+
+    - name: Create jenkins
+      command: 'oc new-app jenkins-persistent VOLUME_CAPACITY=50Gi -n {{ item.name }}'
+      loop: "{{ JENKINS_NAMESPACE }}"
+
+    - name: Create jenkins-agent-maven custom image template
+      template:
+        src: templates/jenkins-maven-bc.yml
+        dest: /tmp/jenkins-maven-bc.yml
+
+    - name: Create jenkins-agent-maven custom image
+      command: 'oc apply -f /tmp/jenkins-maven-bc.yml -n {{ item.name }}'
+      loop: "{{ JENKINS_NAMESPACE }}"
+
+#    - name: Create custom jenkins-agent-maven
+#      command: |
+#        oc new-build -D $'FROM {{ JENKINS_AGENT_MAVEN_IMAGE }}\n
+#          USER root\nRUN yum -y install skopeo && yum clean all\n
+#          USER 1001' -n {{ item.name }}
+#      loop: "{{ JENKINS_NAMESPACE }}"
+
+  - name: Deploy gogs with persistence
+    block:
+    - name: Create gogs project
+      command: 'oc new-project {{ item.name }} --display-name="{{ item.display }}" --description="{{ item.description }}"'
+      when: item.name not in existing_ns.stdout_lines
+      loop: "{{ GOGS_NAMESPACE }}"
+
+    - name: Create gogs pv template
+      template:
+        src: templates/gogs-pv.yml
+        dest: /tmp/gogs-pv.yml
+      loop: "{{ GOGS_NAMESPACE }}"
+
+    - name: Create gogs pv
+      command: 'oc apply -f /tmp/gogs-pv.yml -n {{ item.name }}'
+      loop: "{{ GOGS_NAMESPACE }}"
+
+    - name: Create gogs template
+      template: 
+        src: templates/gogs-postgresql-template.yml 
+        dest: /tmp/gogs-postgresql-template.yml
+      loop: "{{ GOGS_NAMESPACE }}"
+
+    - name: Create gogs
+      command: 'oc apply -f /tmp/gogs-postgresql-template.yml -n {{ item.name }}'
+      loop: "{{ GOGS_NAMESPACE }}"
+
+  - name: Deploy nexus with persistence
+    block:
+    - name: Create nexus project
+      command: 'oc new-project {{ item.name }} --display-name="{{ item.display }}" --description="{{ item.description }}"'
+      when: item.name not in existing_ns.stdout_lines
+      loop: "{{ NEXUS_NAMESPACE }}"
+
+    - name: Create nexus pv template
+      template:
+        src: templates/nexus-pv.yml
+        dest: /tmp/nexus-pv.yml
+      loop: "{{ NEXUS_NAMESPACE }}"
+
+    - name: Create nexus pv
+      command: 'oc apply -f /tmp/nexus-pv.yml -n {{ item.name }}'
+      loop: "{{ NEXUS_NAMESPACE }}"
+
+    - name: Create nexus template
+      template: 
+        src: templates/nexus-persistent-template.yml 
+        dest: /tmp/nexus-persistent-template.yml
+      loop: "{{ NEXUS_NAMESPACE }}"
+
+    - name: Create nexus
+      command: 'oc apply -f /tmp/nexus-persistent-template.yml -n {{ item.name }}'
+      loop: "{{ NEXUS_NAMESPACE }}"
+
+  - name: Remove tmp files
+    file:
+      path: "/tmp/{{ item }}.yml"
+      state: absent
+    with_items:
+    - sonarqube-pv
+    - sonarqube-postgresql-template
+    - jenkins-pv
+    - jenkins-persistent-template
+    - gogs-pv
+    - gogs-postgresql-template
+    - nexus-pv
+    - nexus-persistent-template
+    - jenkins-maven-bc

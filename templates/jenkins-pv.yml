@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  creationTimestamp: null
+  name: {{ JENKINS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ JENKINS_VOLUME_CAPACITY }}
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: {{ JENKINS_PV }}
+    namespace: {{ item.name }}
+  nfs:
+    path: {{ JENKINS_NFS_PATH }}
+    server: {{ JENKINS_NFS_SERVER }}
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ JENKINS_PV }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ JENKINS_VOLUME_CAPACITY }}

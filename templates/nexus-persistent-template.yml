@@ -1,0 +1,154 @@
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}
+spec:
+  tags:
+  - from:
+      kind: DockerImage
+      name: {{ NEXUS_IMAGE }}
+    name: {{ NEXUS_VERSION }}
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}
+spec:
+  replicas: 1
+  selector:
+    deploymentconfig: {{ NEXUS_APPNAME }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        deploymentconfig: {{ NEXUS_APPNAME }}
+    spec:
+      containers:
+      - env:
+        - name: CONTEXT_PATH
+          value: /
+        image: {{ NEXUS_APPNAME }}:{{ NEXUS_VERSION }}
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - echo
+            - ok
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: {{ NEXUS_APPNAME }}
+        ports:
+        - containerPort: 8081
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: {{ NEXUS_MAX_MEMORY }}
+          requests:
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /nexus-data
+          name: {{ NEXUS_PV }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: {{ NEXUS_PV }}
+        persistentVolumeClaim:
+          claimName: {{ NEXUS_PV }}
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - {{ NEXUS_APPNAME }}
+      from:
+        kind: ImageStreamTag
+        name: {{ NEXUS_APPNAME }}:{{ NEXUS_VERSION }}
+    type: ImageChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}
+spec:
+  ports:
+  - name: 8081-tcp
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    deploymentconfig: {{ NEXUS_APPNAME }}
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Route
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}
+spec:
+  port:
+    targetPort: 8081-tcp
+  to:
+    kind: Service
+    name: {{ NEXUS_APPNAME }}
+    weight: 100
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}-docker
+spec:
+  ports:
+  - name: 5000-tcp
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    deploymentconfig: {{ NEXUS_APPNAME }}-docker
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Route
+metadata:
+  labels:
+    app: {{ NEXUS_APPNAME }}
+  name: {{ NEXUS_APPNAME }}-docker
+spec:
+  port:
+    targetPort: 5000-tcp
+  to:
+    kind: Service
+    name: {{ NEXUS_APPNAME }}-docker
+    weight: 100
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
