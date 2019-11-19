@@ -75,12 +75,12 @@
       command: 'oc apply -f /tmp/jenkins-maven-bc.yml -n {{ item.name }}'
       loop: "{{ JENKINS_NAMESPACE }}"
 
-#    - name: Create custom jenkins-agent-maven
-#      command: |
-#        oc new-build -D $'FROM {{ JENKINS_AGENT_MAVEN_IMAGE }}\n
-#          USER root\nRUN yum -y install skopeo && yum clean all\n
-#          USER 1001' -n {{ item.name }}
-#      loop: "{{ JENKINS_NAMESPACE }}"
+    - name: Create custom jenkins-agent-maven
+      command: |
+        oc new-build -D $'FROM docker.io/openshift/jenkins-agent-maven-35-centos7:v3.11\n
+        USER root\nRUN yum -y install skopeo && yum clean all\n
+        USER 1001' --name=jenkins-agent-appdev -n {{ item.name }}
+      loop: "{{ JENKINS_NAMESPACE }}"
 
   - name: Deploy gogs with persistence
     block:

@@ -24,26 +24,26 @@ SONARQUBE_POSTGRESQL_PASSWORD: sonar
 SONARQUBE_POSTGRESQL_USERNAME: sonar
 SONARQUBE_POSTGRESQL_DB: sonar
 SONARQUBE_POSTGRESQL_NFS_PATH: /srv/nfs/user-vols/sonarqube-postgresql-data/
-SONARQUBE_POSTGRESQL_NFS_SERVER: support1.37f1.internal
+SONARQUBE_POSTGRESQL_NFS_SERVER: support1.a918.internal
 SONARQUBE_POSTGRESQL_PV: sonarqube-postgresql-data
 SONARQUBE_POSTGRESQL_VOLUME_CAPACITY: 10Gi
 SONARQUBE_POSTGRESQL_MAX_CONNECTIONS: 100
 SONARQUBE_POSTGRESQL_SHARED_BUFFERS: 12MB
 SONARQUBE_POSTGRESQL_ADMIN_PASSWORD: sonar
 SONARQUBE_NFS_PATH: /srv/nfs/user-vols/sonarqube-data/
-SONARQUBE_NFS_SERVER: support1.37f1.internal
+SONARQUBE_NFS_SERVER: support1.a918.internal
 SONARQUBE_PV: sonarqube-data
 SONARQUBE_VOLUME_CAPACITY: 20Gi
 SONARQUBE_MAX_MEMORY: 2Gi
 SONARQUBE_IMAGE: "docker.io/library/sonarqube:{{ SONARQUBE_VERSION }}"
-SONARQUBE_POSTGRESQL_IMAGE: postgresql:latest
+SONARQUBE_POSTGRESQL_IMAGE: postgresql:10
 
 ### JENKINS ###
 JENKINS_APPNAME: jenkins
 JENKINS_PV: jenkins-data
 JENKINS_VOLUME_CAPACITY: 30Gi
 JENKINS_NFS_PATH: /srv/nfs/user-vols/jenkins-data/
-JENKINS_NFS_SERVER: support1.37f1.internal
+JENKINS_NFS_SERVER: support1.a918.internal
 #JENKINS_IMAGE: registry.redhat.io/openshift3/jenkins-2-rhel7:v3.11
 JENKINS_IMAGE: jenkins-2-rhel7:latest
 JENKINS_VERSION: 2
@@ -63,15 +63,15 @@ GOGS_POSTGRESQL_ADMIN_PASSWORD: gogs
 GOGS_POSTGRESQL_PV: gogs-postgresql-data
 GOGS_POSTGRESQL_VOLUME_CAPACITY: 10Gi
 GOGS_POSTGRESQL_NFS_PATH: /srv/nfs/user-vols/gogs-postgresql-data/
-GOGS_POSTGRESQL_NFS_SERVER: support1.37f1.internal
+GOGS_POSTGRESQL_NFS_SERVER: support1.a918.internal
 GOGS_PV: gogs-data
 GOGS_VOLUME_CAPACITY: 50Gi
 GOGS_NFS_PATH: /srv/nfs/user-vols/gogs-data/
-GOGS_NFS_SERVER: support1.37f1.internal
+GOGS_NFS_SERVER: support1.a918.internal
 GOGS_IMAGE: "docker.io/openshiftdemos/gogs:{{ GOGS_VERSION }}"
 #GOGS_POSTGRESQL_IMAGE: registry.redhat.io/rhscl/postgresql-10-rhel7:latest
-GOGS_POSTGRESQL_IMAGE: postgresql:latest
-GOGS_HOSTNAME: "{{ GOGS_APPNAME }}.apps.37f1.example.opentlc.com"
+GOGS_POSTGRESQL_IMAGE: postgresql:10
+GOGS_HOSTNAME: "{{ GOGS_APPNAME }}.apps.a918.example.opentlc.com"
 
 ### NEXUS ###
 NEXUS_APPNAME: nexus
@@ -81,4 +81,4 @@ NEXUS_MAX_MEMORY: 1Gi
 NEXUS_PV: nexus-data
 NEXUS_VOLUME_CAPACITY: 50Gi
 NEXUS_NFS_PATH: /srv/nfs/user-vols/nexus-data/
-NEXUS_NFS_SERVER: support1.37f1.internal
+NEXUS_NFS_SERVER: support1.a918.internal
